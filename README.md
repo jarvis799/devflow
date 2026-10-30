@@ -1,97 +1,37 @@
-# DevFlow — serverless Android DevOps in your pocket
+# DevFlow Native Android — v2.0.0
 
-A React Native (Expo + TypeScript) app that turns a ZIP archive into a GitHub repository, a GitHub Actions APK
-build, and a Vercel deployment — with no backend server of its own.
+DevFlow has been ported from React Native/Expo to a native Kotlin + Jetpack Compose Android app. This removes the Expo prebuild and Metro runtime from DevFlow itself, which were the source of the setup path described in the previous version. APK compilation is handled by GitHub Actions.
 
-```
-ZIP upload → extract → detect project type → push to GitHub → build APK / deploy site → download artifact
-```
+## Included
 
-## What it does
+- Native Android UI using the same white / glass-card / lime-green visual direction.
+- Home, Projects, Builds, Deployments and Settings sections.
+- ZIP selection through Android's system document picker.
+- ZIP extraction with path traversal checks, `.git` / `__MACOSX` skipping, a 700-file cap and a 2 MB per-file cap.
+- GitHub PAT validation, repository listing, repository creation and batched Git Data API file upload.
+- Adds an Android APK workflow for recognized Gradle or Expo projects when the imported archive has no workflow.
+- GitHub Actions workflow dispatch and workflow-run listing.
+- Vercel token validation, project listing and a best-effort Git-source deployment request.
+- Gemini API key validation.
+- EncryptedSharedPreferences-backed token storage when AndroidX Security can initialize; falls back to app-private SharedPreferences if encryption initialization fails.
+- GitHub Actions workflow to build and upload `app-debug.apk` as `devflow-apk`.
 
-| Area | Implementation |
-| --- | --- |
-| Accounts | GitHub PAT, Vercel token and Gemini key entered in Settings, stored with `expo-secure-store` |
-| ZIP import | `expo-document-picker` → `fflate` extraction, path-traversal guards, 2 MB/file and 700 file limits |
-| Project detection | Gradle/Kotlin, React Native, Expo, Next.js, Vite, React, static HTML |
-| GitHub push | Git Trees API: one commit, existing files preserved (`base_tree`) |
-| APK builds | Adds `android-apk.yml` when missing, dispatches the workflow, monitors the real run |
-| Build monitor | Real run/job/step statuses from the Actions API, polled every 10 s; no invented percentages |
-| AI repair | Gemini reads the failing job log + repo config files, proposes full-file patches, you approve before commit |
-| Artifacts | Lists real run artifacts, downloads them with your token, warns about expired ones |
-| Vercel | Lists/creates projects, deploys from the linked GitHub repo, waits for `READY` before showing a URL |
-| Website customization | Edits personal details in HTML files only, shows a change summary, supports rollback |
+## Build APK
 
-## Requirements
+1. Upload this repository to GitHub (or replace the contents of your existing `jarvis799/devflow` repository after backing it up).
+2. Open **Actions → Build DevFlow APK → Run workflow**.
+3. Download the `devflow-apk` artifact from the successful run.
 
-- Node 20+
-- An Android device or emulator (or build the APK with the included workflow)
-- GitHub token: classic PAT with `repo` + `workflow`, or a fine-grained token with **Contents: read/write**,
-  **Actions: read/write**, **Workflows: write**, **Administration: read/write** (repository creation)
-- Vercel token from <https://vercel.com/account/tokens>, with the Vercel GitHub integration installed for Git deployments
-- Gemini key from <https://aistudio.google.com/apikey>
+The workflow uses a GitHub-hosted Ubuntu runner, JDK 17, Gradle 8.9 and Android Gradle Plugin 8.7.3. No Android SDK installation is required on your phone.
 
-## Run locally
+## Permissions / APIs
 
-```bash
-npm install
-npx expo start          # Expo Go cannot load secure-store? use a dev build below
-npx expo run:android    # full dev build (recommended, all native modules available)
-```
+The app requests only Internet permission. GitHub token needs repository access plus Actions workflow permission to dispatch builds. Vercel deployments require a configured GitHub integration and may need adjustments for team-scoped Vercel projects or repository linking. Gemini is currently validated and stored; AI-based build-log diagnosis and approved patch application are not included in this native port yet.
 
-## Build the APK on GitHub Actions
+## Important scope notes
 
-The workflow in `.github/workflows/android-apk.yml` runs on every push to `main` and via **Run workflow**:
+This is a native rewrite of the supplied project, not a byte-for-byte conversion. Core UI and service connection flows are implemented. Compared with the original Expo source, build-failure Gemini diagnosis, detailed job-step polling, artifact download/extraction, and website HTML customization are not yet implemented in this version. A GitHub workflow can only be dispatched if the target repository contains the expected workflow name and branch. Debug APK is not Play Store signed.
 
-1. checkout → Node 20 → JDK 17
-2. `npm install` (or `npm ci` when a lockfile exists)
-3. `npx expo install --fix` keeps package versions aligned with the Expo SDK
-4. `npx expo prebuild --platform android --no-install`
-5. `./gradlew assembleDebug`
-6. uploads `devflow-apk` as a workflow artifact
+## Package
 
-Download it from the run page → **Artifacts**. Debug APKs are unsigned for release; configure a keystore for
-`assembleRelease` if you need a Play-ready build.
-
-## Architecture
-
-```
-App.tsx                     navigation (5 tabs + push/build/customize screens)
-src/state/AppState.tsx      credentials, connection status, device history
-src/lib/api.ts              fetch wrapper: timeout, JSON, bounded backoff retries
-src/lib/github.ts           repos, trees/commits, workflows, runs, jobs, logs, artifacts, releases
-src/lib/vercel.ts           projects, Git deployments, status polling
-src/lib/gemini.ts           structured failure diagnosis (JSON mode)
-src/lib/zip.ts              archive picking, extraction, detection helpers
-src/lib/detect.ts           project classification + APK workflow templates
-src/lib/store.ts            secure credentials + AsyncStorage history
-src/lib/export.ts           ZIP export, authenticated downloads
-src/components/             glass UI kit + toast host
-src/screens/                Home, Projects, Builds, Build monitor, Deployments, Settings, Zip flow, Customize
-```
-
-No server, no proxy, no database. Every network call goes straight from the device to GitHub, Vercel or
-Google with the user's own token.
-
-## Security notes
-
-- Tokens live in Android Keystore-backed secure storage and are never written to files, logs or commits.
-- Nothing is committed to a repository without an explicit confirmation dialog.
-- AI patches are shown in full before they are committed, are limited to files that exist in the repository,
-  and retries are capped (`MAX_RETRIES = 2`).
-- Extraction rejects absolute paths and `..` segments.
-- Build success is only reported when GitHub Actions reports `conclusion: success`; a deployment URL is only
-  shown once Vercel reports `READY`.
-
-## Known limitations
-
-- Release builds (signed APKs) and AAB outputs are not generated by the default workflow; debug only.
-- Creating a GitHub Release with an APK upload is wired in `src/lib/github.ts` but has no dedicated screen yet.
-- Website customization edits the first four HTML files and only replaces values it found there.
-- Downloading an artifact saves the ZIP through the system file provider; extraction of the APK from that
-  ZIP is left to the user's file manager.
-- Vercel deployments require the GitHub integration on the Vercel account — the API cannot link it for you.
-
-## License
-
-MIT.
+`com.devflow.app` — version `2.0.0`

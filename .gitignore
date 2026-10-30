@@ -1,8 +1,6 @@
-node_modules/
-.expo/
-dist/
-android/
-ios/
-*.log
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
 .DS_Store
-.env
