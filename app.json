@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "DevFlow",
+    "slug": "devflow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "devflow",
+    "splash": {
+      "backgroundColor": "#FFFFFF",
+      "resizeMode": "contain"
+    },
+    "android": {
+      "package": "com.devflow.app",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "permissions": ["INTERNET"]
+    },
+    "plugins": ["expo-secure-store"],
+    "extra": {
+      "eas": {}
+    }
+  }
+}
