@@ -27,7 +27,7 @@ const navTheme = {
   colors: {
     ...DefaultTheme.colors,
     background: colors.bg,
-    card: colors.bg,
+    card: colors.surface,
     text: colors.text,
     border: colors.border,
     primary: colors.limeDeep,
@@ -47,14 +47,20 @@ function TabsNavigator() {
     <Tabs.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: colors.textFaint,
+        tabBarActiveTintColor: colors.limeDeep,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          backgroundColor: colors.bg,
+          backgroundColor: 'rgba(255,255,255,0.88)',
+          borderTopWidth: 1,
           borderTopColor: colors.border,
           height: 62,
           paddingBottom: 8,
           paddingTop: 6,
+          shadowColor: '#0F172A',
+          shadowOpacity: 0.06,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: -6 },
+          elevation: 4,
         },
         tabBarLabelStyle: { fontSize: 10.5, fontWeight: '700' },
         tabBarIcon: ({ color, size }) => (
@@ -78,7 +84,12 @@ export default function App() {
         <ToastProvider>
           <NavigationContainer theme={navTheme}>
             <StatusBar style="dark" />
-            <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+            <Stack.Navigator
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            >
               <Stack.Screen name="Tabs" component={TabsNavigator} />
               <Stack.Screen name="ZipFlow" component={ZipFlowScreen} options={{ presentation: 'card' }} />
               <Stack.Screen name="BuildMonitor" component={BuildMonitorScreen} />
