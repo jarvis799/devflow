@@ -50,7 +50,12 @@ export function detectProject(files: ZipFile[]): Detection {
 
   const base = { gradle, workflow } as Detection;
 
-  if (deps.expo || has(files, 'app.json') && has(files, 'babel.config.js')) {
+  // A JSON app.json is not proof of Expo: bare React Native projects ship the same
+  // file ({"name","displayName"}). Only an Expo config carries an `expo` key, so
+  // keying the check on that stops bare RN projects being routed to the Expo
+  // build workflow (which runs `expo prebuild` and fails without Expo installed).
+  const expoConfig = readJson(files, 'app.json');
+  if (deps.expo || Boolean(expoConfig && expoConfig.expo)) {
     return { ...base, kind: 'expo', label: kindLabel.expo, framework: 'expo' };
   }
   if (deps['react-native']) {
